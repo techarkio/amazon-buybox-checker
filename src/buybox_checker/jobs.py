@@ -207,14 +207,16 @@ class JobManager:
             job.rows.append(row)
 
         extra = {"pairs": pairs} if pairs is not None else {}
+        error = ""
         try:
             self._run_checks(job.asins, job.states, save_row, stop_event=job.stop_event, **settings, **extra)
-            job.status = STATUS_CANCELLED if job.stop_event.is_set() else STATUS_DONE
-        except Exception as error:
-            job.status, job.error = STATUS_FAILED, engine.short_error(error)
+            status = STATUS_CANCELLED if job.stop_event.is_set() else STATUS_DONE
+        except Exception as exception:
+            status, error = STATUS_FAILED, engine.short_error(exception)
         if pairs is not None:
             write_rows(job.csv_path, job.latest_rows())  # one row per ASIN x state again
         job.finished_at = datetime.now().isoformat(timespec="seconds")
+        job.error, job.status = error, status  # last: a finished job's CSV and times are already final
         self._save(job)
 
     def _save(self, job: Job) -> None:

@@ -38,13 +38,18 @@ def append_row(csv_path: Path, row: dict) -> None:
 
 
 def write_rows(csv_path: Path, rows: list[dict]) -> None:
-    """Replace a run's CSV file with these rows (used after failed checks were retried)."""
+    """Replace a run's CSV file with these rows (used after failed checks were retried).
+
+    The rows go to a temporary file that then takes the CSV's place, so a download never reads half a file.
+    """
     with CSV_LOCK:
         csv_path.parent.mkdir(parents=True, exist_ok=True)
-        with csv_path.open("w", newline="", encoding=CSV_ENCODING) as file:
+        temporary = csv_path.with_suffix(".csv.tmp")
+        with temporary.open("w", newline="", encoding=CSV_ENCODING) as file:
             writer = csv.DictWriter(file, fieldnames=RESULT_COLUMNS, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(rows)
+        temporary.replace(csv_path)
 
 
 def read_rows(csv_path: Path) -> list[dict[str, str]]:

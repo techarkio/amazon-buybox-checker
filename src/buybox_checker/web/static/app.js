@@ -62,6 +62,9 @@ async function init() {
   setupResults();
   app.shapesPromise = loadShapes().catch(() => null);
   window.addEventListener("hashchange", onHashChange);
+  // An (i) explanation closes when the page is tapped elsewhere or scrolled.
+  document.addEventListener("click", (event) => { if (!event.target.closest(".info-button")) hideTooltip(); });
+  window.addEventListener("scroll", hideTooltip, { passive: true });
   // The hash names the check and view, so section links scroll instead of changing it.
   document.querySelectorAll("[data-section]").forEach((link) => link.addEventListener("click", scrollToSection));
   resumeJob();
@@ -747,11 +750,30 @@ function groupLabel(group) {
   }[group];
 }
 
+// What each filter means, for its (i) button. Products are measured against your store when it is set,
+// otherwise against the top winner: the seller that holds the most buyboxes in this check.
+function groupHelp(group) {
+  const mine = isMine();
+  const Ref = mine ? "You" : "The top winner";
+  return {
+    other: `${Ref} ${mine ? "hold" : "holds"} the buybox in no state: another seller holds it wherever anyone does.`
+      + (mine ? "" : " The top winner is the seller with the most buyboxes in this check."),
+    split: `${Ref} ${mine ? "hold" : "holds"} the buybox in some states, and other sellers hold it in the rest.`,
+    none: "In at least one state the page loaded but nobody holds the buybox: shoppers only see \"See all buying"
+      + ` options". No other seller holds it anywhere${mine ? " instead of you" : ""}.`,
+    failed: "At least one state could not be checked: Amazon blocked it, it timed out, or the ASIN does not exist."
+      + ` No other seller holds the buybox in the states that were checked. Retry checks the failed states again.`,
+    one: `${Ref} ${mine ? "hold" : "holds"} the buybox in every state checked.`,
+    pending: "Some states of these products are still being checked.",
+  }[group] || "";
+}
+
 // ---------- Overview ----------
 
 function renderOverview(job) {
   const ov = job.overview;
-  if (!app.list.touched) app.list.group = ATTENTION_GROUPS.find((g) => ov.groups[g]) || "all"; // until a tab is picked
+  // Until a filter is picked: a check of several ASINs opens on all of them, a single ASIN on its own group.
+  if (!app.list.touched) app.list.group = job.asins.length > 1 ? "all" : ATTENTION_GROUPS.find((g) => ov.groups[g]) || "all";
   const allClear = ov.all_clear && job.status === "done";
   $("all-clear").hidden = !allClear;
   $("winner-section").hidden = allClear || job.done === 0;
@@ -833,20 +855,40 @@ function renderShare(bar, legend, segments) {
   }));
 }
 
+// A short summary next to the winner: how many products need a look, one sentence per reason, each with a link
+// that opens the product list on that group. The filters above the list keep the full breakdown.
 function renderAttention(job) {
-  const groups = [...ATTENTION_GROUPS, "one"];
-  if (job.overview.groups.pending) groups.push("pending");
-  $("attention-list").replaceChildren(...groups.map((group) => {
-    const count = job.overview.groups[group];
-    const card = el("button", { className: `attention-card${count ? "" : " zero"}`, type: "button" },
-      el("b", {}, fmt(count)), el("span", {}, groupLabel(group)));
-    card.setAttribute("aria-pressed", String(app.list.group === group));
-    card.addEventListener("click", () => {
+  const ov = job.overview;
+  const groups = ATTENTION_GROUPS.filter((group) => ov.groups[group]);
+  const needs = groups.reduce((sum, group) => sum + ov.groups[group], 0);
+  const products = `${fmt(ov.products)} ${plural(ov.products, "product")}`;
+  $("attention-title").textContent = needs
+    ? `${fmt(needs)} of ${products} ${needs === 1 ? "needs" : "need"} a look`
+    : ov.groups.pending ? "Nothing to look at so far" : `All ${products}: ${groupLabel("one").toLowerCase()}`;
+  const lines = groups.map((group) => {
+    const count = ov.groups[group];
+    const show = el("button", { className: "link-button", type: "button" }, `Show ${count === 1 ? "it" : "them"} →`);
+    show.addEventListener("click", () => {
       setListGroup(group);
       $("list-section").scrollIntoView({ behavior: prefersMotion() ? "smooth" : "auto", block: "start" });
     });
-    return card;
-  }));
+    return el("div", { className: "attention-line" }, el("p", {}, attentionSentence(group, count)), show);
+  });
+  if (ov.groups.pending) {
+    lines.push(el("p", { className: "attention-note" }, `${fmt(ov.groups.pending)} ${plural(ov.groups.pending, "product")} still being checked.`));
+  }
+  $("attention-list").replaceChildren(...lines);
+}
+
+function attentionSentence(group, count) {
+  const products = `${fmt(count)} ${plural(count, "product")}`;
+  return {
+    other: isMine() ? `You hold the buybox in no state for ${products}.`
+      : `Another seller holds the buybox in every state for ${products}.`,
+    split: `The buybox is split between sellers for ${products}.`,
+    none: `${products} ${count === 1 ? "has" : "have"} no buybox in at least one state.`,
+    failed: `${products} could not be checked in every state.`,
+  }[group];
 }
 
 function lossLevels(max) {
@@ -892,17 +934,46 @@ function renderRecent(job) {
     strip(product, "small"), el("span", { className: "summary" }, cellSummary(product)))));
 }
 
+// All products first, then the groups that have products (and the one picked, even when it empties).
 function renderTabs(job) {
-  const groups = [...ATTENTION_GROUPS, "one"];
-  if (job.overview.groups.pending) groups.push("pending");
-  groups.push("all");
+  const counts = { ...job.overview.groups, all: job.overview.products };
+  const groups = ["all", ...ATTENTION_GROUPS, "one", "pending"]
+    .filter((group) => group === "all" || counts[group] || app.list.group === group);
   $("list-tabs").replaceChildren(...groups.map((group) => {
-    const count = group === "all" ? job.overview.products : job.overview.groups[group];
-    const tab = el("button", { className: "tab", type: "button", role: "tab" }, groupLabel(group), " ", el("b", {}, fmt(count)));
-    tab.setAttribute("aria-selected", String(app.list.group === group));
+    const count = counts[group];
+    const tab = el("button", { className: "tab", type: "button" }, groupLabel(group), " ", el("b", {}, fmt(count)));
+    tab.setAttribute("aria-pressed", String(app.list.group === group));
     tab.addEventListener("click", () => setListGroup(group));
-    return tab;
+    const help = groupHelp(group);
+    if (!help) return tab;
+    const info = el("button", { className: "info-button", type: "button" }, "i");
+    info.setAttribute("aria-label", `What "${groupLabel(group)}" means`);
+    attachInfo(info, groupLabel(group), help);
+    return el("span", { className: "tab-item" }, tab, info);
   }));
+}
+
+function attachInfo(button, title, text) {
+  const show = () => showInfo(button, title, text);
+  button.addEventListener("mouseenter", show);
+  button.addEventListener("focus", show);
+  button.addEventListener("click", show); // touch screens: a tap shows it, a tap elsewhere hides it
+  button.addEventListener("mouseleave", hideTooltip);
+  button.addEventListener("blur", hideTooltip);
+  button.addEventListener("keydown", (event) => { if (event.key === "Escape") hideTooltip(); });
+}
+
+function showInfo(anchor, title, text) {
+  const tooltip = $("tooltip");
+  tooltip.replaceChildren(el("strong", {}, title), el("p", {}, text));
+  tooltip.hidden = false;
+  anchor.setAttribute("aria-describedby", "tooltip");
+  const box = anchor.getBoundingClientRect();
+  const x = Math.min(box.left + box.width / 2 - tooltip.offsetWidth / 2, window.innerWidth - tooltip.offsetWidth - 8);
+  const below = box.bottom + 8;
+  const y = below + tooltip.offsetHeight > window.innerHeight - 8 ? box.top - tooltip.offsetHeight - 8 : below;
+  tooltip.style.left = `${Math.max(8, x)}px`;
+  tooltip.style.top = `${Math.max(8, y)}px`;
 }
 
 function setListGroup(group) {
