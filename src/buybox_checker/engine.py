@@ -72,7 +72,7 @@ class IpThrottle:
         self._resume_at = 0.0  # time.monotonic() before which no session on this IP starts a check
         self._cooldown = 0.0
         self._slowdown = 0.0
-        self._last_success_at = 0.0
+        self._last_success_at = float("-inf")  # no success yet (0.0 would be "at boot" on a monotonic clock)
         self._blocked_at: dict[str, float] = {}  # zipcode -> when a check for it was last pushed back
 
     def wait_turn(self, stop_event: threading.Event) -> bool:

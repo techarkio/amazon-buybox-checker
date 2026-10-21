@@ -23,6 +23,13 @@ def test_throttle_pauses_the_ip_when_several_zipcodes_are_blocked_and_backs_off(
     assert (throttle._cooldown, throttle._slowdown) == (0, 3.5)
 
 
+def test_throttle_counts_no_success_yet_even_right_after_boot(monkeypatch):
+    monkeypatch.setattr(engine.time, "monotonic", lambda: 5.0)  # a machine up for 5 s, like a fresh CI runner
+    throttle = IpThrottle("this computer")
+    throttle.record("blocked", "35203")
+    assert throttle._cooldown == 30  # nothing has succeeded: the IP pauses
+
+
 def test_throttle_ignores_one_flagged_zipcode_while_others_succeed():
     throttle = IpThrottle("this computer")
     throttle.record("ok", "99501")
