@@ -18,6 +18,8 @@ classifiers = [
 ]
 dependencies = [
     "playwright>=1.49",
+    "curl_cffi>=0.13,<0.15",  # 0.15+ does not load on recent macOS; without it, checks use the browser only
+    "selectolax>=1.0",
     "fastapi>=0.110",
     "uvicorn>=0.27",
     "python-multipart>=0.0.9",

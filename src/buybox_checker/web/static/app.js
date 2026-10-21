@@ -38,7 +38,7 @@ const JOB_STATUS_LABELS = { running: "Running", done: "Done", cancelled: "Stoppe
 const LABEL_AT = { FL: [798, 546], LA: [566, 478], MI: [688, 188], CA: [80, 292], KY: [692, 322], VA: [798, 306], ID: [200, 160] };
 
 const app = {
-  config: null, statesByCode: new Map(), presets: [], selected: new Set(), stateMode: "all",
+  config: null, statesByCode: new Map(), presets: [], selected: new Set(), stateMode: "core",
   userPickedStates: false, autoPicked: false, fileText: "", parsed: { asins: [], duplicates: 0, skipped: [] },
   store: loadStore(), job: null, pollTimer: null, route: { view: "overview", asin: null },
   list: { group: null, touched: false, q: "", sort: "risk", page: 1, data: null, token: 0 },
@@ -153,12 +153,13 @@ function clearFile() {
 }
 
 // ---------- States ----------
-// The presets come from the server (core markets, core + growth). Picking states by hand that match a preset
+// The presets come from the server (core markets, core + growth), shown before All 50 states and Custom; the page
+// starts on Core markets unless this browser saved another choice. Picking states by hand that match a preset
 // selects that preset; any other selection is "Custom". A long list gets Core + growth unless you chose states.
 
 function setupStates() {
   const allCodes = app.config.states.map((s) => s.code);
-  app.presets = [{ key: "all", name: "All 50 states", codes: allCodes }, ...app.config.presets,
+  app.presets = [...app.config.presets, { key: "all", name: "All 50 states", codes: allCodes },
     { key: "custom", name: "Custom", codes: null }];
 
   const group = $("state-presets");
@@ -189,7 +190,8 @@ function setupStates() {
   $("states-all").addEventListener("click", () => choosePreset("all"));
   $("states-none").addEventListener("click", () => { markPicked(); setSelection([]); });
   $("use-all-states").addEventListener("click", () => choosePreset("all"));
-  setSelection(loadSavedStates() || allCodes, { save: false });
+  const core = app.presets.find((p) => p.key === "core");
+  setSelection(loadSavedStates() || (core ? core.codes : allCodes), { save: false });
 }
 
 function markPicked() {

@@ -27,7 +27,7 @@ from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, 
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from buybox_checker import engine
+from buybox_checker import engine, http_page
 from buybox_checker.asin_input import decode_upload, extract_asins, find_short_links
 from buybox_checker.catalog import (
     FILTER_ALL,
@@ -48,6 +48,7 @@ from buybox_checker.config import (
     remote_urls_from_env,
 )
 from buybox_checker.jobs import STATUS_RUNNING, Job, JobBusyError, JobManager
+from buybox_checker.proxies import proxies_from_env
 from buybox_checker.resources import detect_resources, parse_sessions
 from buybox_checker.states import GMV_TIERS, PRESETS, STATES, pick_states
 
@@ -61,6 +62,8 @@ PRODUCTS_PER_PAGE = 25
 MAX_PRODUCTS_PER_PAGE = 100
 HISTORY_ASINS = 3  # ASINs named in a "Past checks" line; the rest are counted
 MAX_LOCAL_SESSIONS = 6
+MAX_RUNNING_JOBS = 20  # checks running at once when product pages go over HTTP; each IP is paced across all
+WARM_UP_PRESET = "core-growth"  # zipcodes whose cookies are made on every proxy at start
 APP_HEADER = "X-Buybox-Checker"
 HEALTH_PATH = "/api/health"
 PASSWORD_ENV = "BUYBOX_CHECKER_PASSWORD"
@@ -99,8 +102,10 @@ def create_app(manager: JobManager | None = None, default_sessions: int | None =
     contact_techark = contact_from_env() if contact_techark is None else contact_techark
     public = public_from_env() if public is None else public
     app = FastAPI(title="Amazon Buybox Checker")
-    manager = manager or JobManager(jobs_dir=JOBS_DIR)
     remote_urls = remote_urls or []
+    # several checks at once only over HTTP: a browser per session would not fit in memory
+    concurrent = http_page.is_available() and not remote_urls
+    manager = manager or JobManager(jobs_dir=JOBS_DIR, max_running=MAX_RUNNING_JOBS if concurrent else 1)
 
     if password:
         @app.middleware("http")
@@ -298,6 +303,12 @@ def main() -> None:
     args = parse_args()
     password = os.environ.get(PASSWORD_ENV) or None
     remote_urls = args.remote or remote_urls_from_env()
+    proxies = proxies_from_env()  # a mistyped BUYBOX_CHECKER_PROXIES stops the server here, not at the first check
+    if proxies:
+        logger.info("Browsers on this machine go through %d proxies: %s", len(proxies),
+                    ", ".join(proxy.name for proxy in proxies))
+        warm_up_zipcodes = list(pick_states([WARM_UP_PRESET]).values())
+        threading.Thread(target=engine.warm_up, args=(warm_up_zipcodes,), name="warm-up", daemon=True).start()
     if args.host not in LOOPBACK_HOSTS and not password and not public_from_env():
         logger.warning("Listening on %s without a password: anyone who can reach it can start checks from your "
                        "IP. Set %s to require one.", args.host, PASSWORD_ENV)

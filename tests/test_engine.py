@@ -3,7 +3,7 @@
 import threading
 
 from buybox_checker import engine
-from buybox_checker.engine import IpThrottle, Session
+from buybox_checker.engine import IpThrottle, Route, Session
 
 
 def test_throttle_pauses_the_ip_when_several_zipcodes_are_blocked_and_backs_off():
@@ -55,7 +55,7 @@ def test_a_check_that_keeps_failing_is_tried_again_later_in_the_run(monkeypatch)
     cleared = []
     monkeypatch.setattr(engine, "clear_saved_session", cleared.append)
 
-    def fake_check_once(session, asin, zipcode):
+    def fake_check_once(session, asin, zipcode, route):
         calls.append(zipcode)
         first_round = calls.count("10001") <= engine.MAX_ATTEMPTS
         if zipcode == "10001" and first_round:
@@ -65,7 +65,7 @@ def test_a_check_that_keeps_failing_is_tried_again_later_in_the_run(monkeypatch)
     monkeypatch.setattr(engine, "check_once", fake_check_once)
     checks = engine.build_check_queue(["B0BCMLGPYB"], {"NY": "10001", "CA": "90012"})
     rows = []
-    session = Session(FakeBrowser(), "test agent", IpThrottle("test"))
+    session = Session(FakeBrowser(), "test agent", [Route(None, IpThrottle("test"))])
     engine.process_checks(session, checks, rows.append, threading.Event())
 
     assert [(row["state"], row["status"], row["attempts"]) for row in rows] == [("CA", "ok", 1), ("NY", "ok", 3)]
@@ -77,10 +77,10 @@ def test_a_zipcode_still_blocked_after_every_round_gets_a_fresh_session_next_run
     monkeypatch.setattr(engine, "COOLDOWN_SECONDS", 0)
     monkeypatch.setattr(engine, "SLOWDOWN_STEP_SECONDS", 0)
     cleared = []
-    monkeypatch.setattr(engine, "clear_saved_session", cleared.append)
-    monkeypatch.setattr(engine, "check_once", lambda session, asin, zipcode: {"status": "blocked"})
+    monkeypatch.setattr(engine, "clear_all_saved_sessions", cleared.append)
+    monkeypatch.setattr(engine, "check_once", lambda session, asin, zipcode, route: {"status": "blocked"})
     rows = []
-    session = Session(FakeBrowser(), "test agent", IpThrottle("test"))
+    session = Session(FakeBrowser(), "test agent", [Route(None, IpThrottle("test"))])
     engine.process_checks(session, engine.build_check_queue(["B0BCMLGPYB"], {"AL": "35203"}), rows.append,
                           threading.Event())
     assert [(row["status"], row["attempts"]) for row in rows] == [("blocked", 4)]

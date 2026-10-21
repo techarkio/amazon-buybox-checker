@@ -20,6 +20,22 @@ def test_job_collects_rows_writes_csv_and_summarizes():
     assert [s["with_buybox"] for s in data["summaries"]] == [2, 2]
 
 
+def test_several_jobs_run_at_once_up_to_the_limit():
+    run = BlockingRun()
+    manager = JobManager(run_checks=run, max_running=2)
+    first = manager.start(["B0BCMLGPYB"], {"NY": "10001"})
+    second = manager.start(["B09B8V1LZ3"], {"CA": "90012"})
+    with pytest.raises(JobBusyError, match="2 checks are running"):
+        manager.start(["B07FNDF2R7"], {"TX": "77002"})
+    manager.cancel(first.id)
+    wait_until_finished(first)
+    third = manager.start(["B07FNDF2R7"], {"TX": "77002"})  # a place freed up
+    run.release.set()
+    wait_until_finished(second)
+    wait_until_finished(third)
+    assert (second.status, third.status) == (STATUS_DONE, STATUS_DONE)
+
+
 def test_only_one_job_runs_at_a_time_and_cancel_stops_it():
     run = BlockingRun()
     manager = JobManager(run_checks=run)

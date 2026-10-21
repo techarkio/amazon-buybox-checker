@@ -5,7 +5,8 @@ checker shares the same cached zipcode sessions no matter which folder it starts
 Set the BUYBOX_CHECKER_HOME environment variable to use another folder.
 
 BUYBOX_CHECKER_REMOTE lists remote Playwright servers (comma-separated ws:// URLs); the CLI and the web UI
-also take them as --remote options.
+also take them as --remote options. BUYBOX_CHECKER_PROXIES lists HTTP proxies for the local browsers
+(see proxies.py).
 
 BUYBOX_CHECKER_MAX_ASINS caps the ASINs per web UI check (default 500), and BUYBOX_CHECKER_CONTACT_TECHARK=1
 shows "contact TECHARK" where the page talks about that limit (used by TECHARK's hosted site).

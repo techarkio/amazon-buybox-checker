@@ -3,8 +3,9 @@
 Input:  ASINs, {state code: zipcode} and session settings for a new job; job ids to look up, cancel or retry.
 Output: Job objects whose rows fill in while the run goes, plus a CSV file per job. Given a jobs folder,
         each job's settings and status are also saved as JSON, so jobs survive a restart.
-Constraints: all sessions share this computer's IP address, so only one job runs at a time; starting
-        or retrying one while a job runs raises JobBusyError. A job that was running when the server
+Constraints: at most max_running jobs run at once (one by default, as a browser per session is heavy;
+        with product pages over HTTP, the web app allows more, and the engine paces every IP across all of
+        them). Starting or retrying a job beyond that raises JobBusyError. A job that was running when the server
         stopped comes back "interrupted": its finished rows are kept and the rest can be retried.
         Retrying adds new rows for the same ASIN x state; the latest row of each pair is the one that counts.
 """
@@ -111,11 +112,12 @@ class Job:
 
 
 class JobManager:
-    """Start, track, cancel and retry check jobs, one running at a time."""
+    """Start, track, cancel and retry check jobs, up to max_running at a time."""
 
-    def __init__(self, run_checks=engine.run_checks, jobs_dir: Path | None = None) -> None:
+    def __init__(self, run_checks=engine.run_checks, jobs_dir: Path | None = None, max_running: int = 1) -> None:
         self._run_checks = run_checks  # replaceable in tests, so no browser is needed
         self._jobs_dir = jobs_dir  # None: jobs live in memory only
+        self.max_running = max_running
         self._jobs: dict[str, Job] = {}
         self._lock = threading.Lock()
         if jobs_dir:
@@ -186,10 +188,13 @@ class JobManager:
         return job
 
     def _refuse_if_busy(self) -> None:
-        """Raise JobBusyError, describing the running job, when one runs (call with the lock held)."""
-        job = self.running()
-        if job is None:
+        """Raise JobBusyError when max_running jobs already run (call with the lock held)."""
+        running = [job for job in self._jobs.values() if job.status == STATUS_RUNNING]
+        if len(running) < self.max_running:
             return
+        if self.max_running > 1:
+            raise JobBusyError(f"{len(running)} checks are running right now, the most this site runs at once.")
+        job = running[0]
         eta = job.eta_seconds()
         left = f", about {format_duration(eta)} left" if eta else ""
         raise JobBusyError(f"A check is already running: {len(job.asins)} product(s) in {len(job.states)} "
