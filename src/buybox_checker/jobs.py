@@ -188,7 +188,7 @@ class JobManager:
         eta = job.eta_seconds()
         left = f", about {format_duration(eta)} left" if eta else ""
         raise JobBusyError(f"A check is already running: {len(job.asins)} product(s) in {len(job.states)} "
-                           f"state(s), started {job.started_at[11:16]}{left}. Wait for it or stop it first.")
+                           f"state(s), started {job.started_at[11:16]}{left}.")
 
     def _run(self, job: Job, settings: dict, pairs: list[tuple[str, str]] | None) -> None:
         """Run the job's checks, saving each row to the job and its CSV, then record how it ended."""

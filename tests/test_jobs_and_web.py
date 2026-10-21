@@ -69,6 +69,18 @@ def test_web_api_rejects_bad_requests():
     assert client.get("/").status_code == 200 and "Amazon Buybox Checker" in client.get("/").text
 
 
+def test_public_site_never_hands_out_someone_elses_check():
+    manager = JobManager(run_checks=BlockingRun())
+    client = TestClient(create_app(manager=manager, public=True))
+    assert client.get("/api/config").json()["public"] is True
+    started = client.post("/api/jobs", headers=HEADER, data={"text": "B0BCMLGPYB"}).json()["job"]
+    assert client.get("/api/jobs/latest").status_code == 404  # no browsing the latest check
+    assert client.get(f"/api/jobs/{started['id']}").status_code == 200  # its own link still works
+    busy = client.post("/api/jobs", headers=HEADER, data={"text": "B09B8V1LZ3"})
+    assert busy.status_code == 409 and busy.json()["detail"].endswith("Please try again in a few minutes.")
+    manager.cancel(started["id"])
+
+
 def test_web_password_protects_everything_but_the_health_check():
     import base64
 

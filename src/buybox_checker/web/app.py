@@ -40,7 +40,13 @@ from buybox_checker.catalog import (
     product_page,
     recent_products,
 )
-from buybox_checker.config import JOBS_DIR, contact_from_env, max_asins_from_env, remote_urls_from_env
+from buybox_checker.config import (
+    JOBS_DIR,
+    contact_from_env,
+    max_asins_from_env,
+    public_from_env,
+    remote_urls_from_env,
+)
 from buybox_checker.jobs import STATUS_RUNNING, Job, JobBusyError, JobManager
 from buybox_checker.resources import detect_resources, parse_sessions
 from buybox_checker.states import GMV_TIERS, PRESETS, STATES, pick_states
@@ -80,14 +86,17 @@ def is_authorized(authorization: str | None, password: str) -> bool:
 
 def create_app(manager: JobManager | None = None, default_sessions: int | None = None,
                remote_urls: list[str] | None = None, password: str | None = None,
-               max_asins: int | None = None, contact_techark: bool | None = None) -> FastAPI:
+               max_asins: int | None = None, contact_techark: bool | None = None,
+               public: bool | None = None) -> FastAPI:
     """Build the web app around a job manager (a fresh one unless a test passes its own).
 
     default_sessions None ("auto") sizes the local sessions from the server's free CPU and memory at each request.
-    max_asins and contact_techark default to the BUYBOX_CHECKER_MAX_ASINS / _CONTACT_TECHARK settings.
+    max_asins, contact_techark and public default to the BUYBOX_CHECKER_MAX_ASINS / _CONTACT_TECHARK / _PUBLIC
+    settings. A public site never hands out the latest job: a check is opened only by its (unguessable) id.
     """
     max_asins = max_asins_from_env() if max_asins is None else max_asins
     contact_techark = contact_from_env() if contact_techark is None else contact_techark
+    public = public_from_env() if public is None else public
     app = FastAPI(title="Amazon Buybox Checker")
     manager = manager or JobManager(jobs_dir=JOBS_DIR)
     remote_urls = remote_urls or []
@@ -117,7 +126,8 @@ def create_app(manager: JobManager | None = None, default_sessions: int | None =
             "states": [vars(state) for state in STATES.values()],
             "tiers": [vars(tier) for tier in GMV_TIERS], "presets": [vars(preset) for preset in PRESETS.values()],
             "default_sessions": sessions_default(), "remote_sessions": len(remote_urls),
-            "max_asins": max_asins, "contact_techark": contact_techark, "seconds_per_check": engine.SECONDS_PER_CHECK,
+            "max_asins": max_asins, "contact_techark": contact_techark, "public": public,
+            "seconds_per_check": engine.SECONDS_PER_CHECK,
         }
 
     @app.post("/api/jobs", dependencies=[Depends(require_app_header)])
@@ -141,13 +151,13 @@ def create_app(manager: JobManager | None = None, default_sessions: int | None =
         except ValueError as error:
             raise HTTPException(400, str(error)) from error
         except JobBusyError as error:
-            raise HTTPException(409, str(error)) from error
+            raise HTTPException(409, busy_message(error, public)) from error
         return {"job": job_view(job), "skipped_short_links": find_short_links(text)}
 
     @app.get("/api/jobs/latest")
     def get_latest_job(store: str = "") -> dict:
-        """Return the most recent job, so a reloaded page can pick it up again."""
-        job = manager.latest()
+        """Return the most recent job, so a reloaded page can pick it up again (never on a public site)."""
+        job = None if public else manager.latest()
         if job is None:
             raise HTTPException(404, "No jobs yet")
         return job_view(job, store)
@@ -196,7 +206,7 @@ def create_app(manager: JobManager | None = None, default_sessions: int | None =
         except ValueError as error:
             raise HTTPException(400, str(error)) from error
         except JobBusyError as error:
-            raise HTTPException(409, str(error)) from error
+            raise HTTPException(409, busy_message(error, public)) from error
 
     @app.get("/api/jobs/{job_id}/csv")
     def download_csv(job_id: str) -> FileResponse:
@@ -208,6 +218,12 @@ def create_app(manager: JobManager | None = None, default_sessions: int | None =
 
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
     return app
+
+
+def busy_message(error: JobBusyError, public: bool) -> str:
+    """Say what is running and what to do: visitors of a public site can only wait."""
+    advice = "Please try again in a few minutes." if public else "Wait for it or stop it first."
+    return f"{error} {advice}"
 
 
 def job_view(job: Job, store: str = "") -> dict:
@@ -265,7 +281,7 @@ def main() -> None:
     args = parse_args()
     password = os.environ.get(PASSWORD_ENV) or None
     remote_urls = args.remote or remote_urls_from_env()
-    if args.host not in LOOPBACK_HOSTS and not password:
+    if args.host not in LOOPBACK_HOSTS and not password and not public_from_env():
         logger.warning("Listening on %s without a password: anyone who can reach it can start checks from your "
                        "IP. Set %s to require one.", args.host, PASSWORD_ENV)
     url = f"http://{'localhost' if args.host in LOOPBACK_HOSTS or args.host == '0.0.0.0' else args.host}:{args.port}/"

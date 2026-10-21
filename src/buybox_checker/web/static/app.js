@@ -24,6 +24,7 @@ const STATUS_LABELS = {
 };
 const STATES_STORAGE_KEY = "buybox-checker.states"; // this browser remembers the last states picked
 const STORE_STORAGE_KEY = "buybox-checker.store"; // and the answer to "Is this your store?"
+const LAST_JOB_STORAGE_KEY = "buybox-checker.last-job"; // and the last check it started (public sites)
 const SELLER_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)"];
 const ATTENTION_GROUPS = ["other", "split", "none", "failed"];
 // Small north-eastern states (and Hawaii) are labelled outside the map, with a line to the state.
@@ -345,7 +346,7 @@ async function startJob(event, firstAsins = null) {
     const response = await fetch("/api/jobs", { method: "POST", body: form, headers: APP_HEADER });
     const data = await response.json();
     if (response.status === 409) {
-      showMessage(data.detail, { action: { label: "Watch it", onClick: watchLatest } });
+      showMessage(data.detail, app.config.public ? {} : { action: { label: "Watch it", onClick: watchLatest } });
       return;
     }
     if (!response.ok) throw new Error(data.detail || "Could not start the check");
@@ -354,6 +355,7 @@ async function startJob(event, firstAsins = null) {
     }
     resetViews();
     app.job = data.job;
+    rememberLastJob(data.job.id);
     location.hash = defaultHash(data.job);
     $("job-section").hidden = false;
     $("job-section").scrollIntoView({ behavior: prefersMotion() ? "smooth" : "auto", block: "start" });
@@ -434,7 +436,10 @@ async function resumeJob() {
     if (route.id) {
       app.job = await fetchJson(api(`/api/jobs/${encodeURIComponent(route.id)}`));
     } else {
-      app.job = await fetchJson(api("/api/jobs/latest"));
+      // A public site never shows someone else's latest check: reopen only the one this browser started.
+      const mine = app.config.public ? lastJob() : null;
+      if (app.config.public && !mine) return;
+      app.job = await fetchJson(api(mine ? `/api/jobs/${encodeURIComponent(mine)}` : "/api/jobs/latest"));
       history.replaceState(null, "", defaultHash(app.job));
     }
   } catch {
@@ -527,6 +532,22 @@ async function retryJob() {
     showJobError(error.message);
   } finally {
     $("retry-button").disabled = false;
+  }
+}
+
+function rememberLastJob(id) {
+  try {
+    localStorage.setItem(LAST_JOB_STORAGE_KEY, id);
+  } catch {
+    // storage blocked: the check is still reachable from its link
+  }
+}
+
+function lastJob() {
+  try {
+    return localStorage.getItem(LAST_JOB_STORAGE_KEY);
+  } catch {
+    return null;
   }
 }
 
