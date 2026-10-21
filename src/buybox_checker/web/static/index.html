@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Amazon Buybox Checker — TECHARK</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231D4ED8'/%3E%3Cpath transform='translate(5 7) scale(.0588)' fill='%23fff' d='M72 0H374L341 74H0ZM119.69 72H193.68L114 307H39ZM232.68 72H252.3L335 307H258L205 153Z'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <!-- TECHARK master artwork: the mark (one color) and the drawn wordmark. Never retype the wordmark. -->
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="mk" viewBox="0 0 374 307"><path fill="currentColor" d="M72 0H374L341 74H0ZM119.69 72H193.68L114 307H39ZM232.68 72H252.3L335 307H258L205 153Z"/></symbol>
+    <symbol id="wm" viewBox="0 0 383 60"><path fill="currentColor" d="M1.8523489932885906 9.22147651006712V7.105427357601002e-15H49.812080536912745V9.22147651006712H31.208053691275165V60.0H20.53691275167785V9.22147651006712Z M56.285637583892616 60.0V7.105427357601002e-15H97.9634899328859V9.22147651006712H66.91651006711409V25.006711409395976H95.62791946308724V34.06711409395973H66.91651006711409V50.77852348993289H97.9634899328859V60.0Z M131.41691275167784 60.966442953020135Q123.16187919463087 60.966442953020135 116.7793288590604 57.14093959731544Q110.39677852348993 53.31543624161074 106.77261744966442 46.348993288590606Q103.14845637583892 39.38255033557047 103.14845637583892 30.04026845637584Q103.14845637583892 20.617449664429536 106.7524832214765 13.651006711409401Q110.35651006711409 6.684563758389267 116.75919463087249 2.8590604026845696Q123.16187919463087 -0.9664429530201275 131.41691275167784 -0.9664429530201275Q136.49073825503353 -0.9664429530201275 140.88 0.5436241610738293Q145.26926174496643 2.053691275167786 148.67194630872484 4.8926174496644315Q152.07463087248323 7.731543624161077 154.28939597315434 11.67785234899329Q156.5041610738255 15.624161073825505 157.26926174496643 20.577181208053695H146.43704697986576Q145.83302013422818 17.718120805369132 144.50416107382551 15.48322147651007Q143.17530201342282 13.24832214765101 141.24241610738255 11.697986577181211Q139.30953020134228 10.147651006711413 136.8531543624161 9.362416107382554Q134.39677852348993 8.577181208053695 131.49744966442952 8.577181208053695Q126.02093959731542 8.577181208053695 122.07463087248321 11.255033557046982Q118.128322147651 13.93288590604027 115.99409395973154 18.74496644295302Q113.85986577181207 23.557046979865774 113.85986577181207 30.04026845637584Q113.85986577181207 36.48322147651007 115.9739597315436 41.2751677852349Q118.08805369127515 46.06711409395973 122.05449664429528 48.74496644295302Q126.02093959731542 51.42281879194631 131.49744966442952 51.42281879194631Q134.39677852348993 51.42281879194631 136.83302013422818 50.63758389261746Q139.26926174496643 49.852348993288594 141.2021476510067 48.322147651006716Q143.13503355704697 46.79194630872483 144.48402684563757 44.57718120805369Q145.83302013422818 42.36241610738255 146.4773154362416 39.50335570469799H157.26926174496643Q156.5041610738255 44.41610738255034 154.28939597315434 48.36241610738255Q152.07463087248323 52.308724832214764 148.6518120805369 55.127516778523486Q145.2289932885906 57.946308724832214 140.85986577181205 59.45637583892618Q136.49073825503353 60.966442953020135 131.41691275167784 60.966442953020135Z M164.58845637583892 60.0V7.105427357601002e-15H175.21932885906037V24.765100671140942H202.88375838926171V7.105427357601002e-15H213.55489932885905V60.0H202.88375838926171V33.986577181208055H175.21932885906037V60.0Z M218.65932885906037 60.0 240.0821476510067 7.105427357601002e-15H253.4512751677852L274.79355704697986 60.0H263.0754362416107L252.56536912751676 28.469798657718123Q250.99489932885905 23.4765100671141 249.26335570469797 17.859060402684566Q247.5318120805369 12.241610738255034 245.31704697986575 4.590604026845639H248.25664429530198Q246.04187919463084 12.241610738255034 244.29020134228185 17.859060402684566Q242.53852348993286 23.4765100671141 240.88751677852346 28.469798657718123L230.09557046979864 60.0ZM231.38416107382548 45.664429530201346V36.92617449664429H262.06872483221474V45.664429530201346Z M279.8979865771812 60.0V7.105427357601002e-15H303.2939597315436Q309.8979865771812 7.105427357601002e-15 314.71006711409393 2.3355704697986646Q319.52214765100666 4.671140939597322 322.1395973154362 8.979865771812086Q324.7570469798658 13.28859060402685 324.7570469798658 19.167785234899334Q324.7570469798658 25.006711409395976 321.9986577181208 29.2751677852349Q319.2402684563758 33.54362416107382 314.2671140939597 35.85906040268456Q309.2939597315436 38.1744966442953 302.60939597315434 38.1744966442953H286.17986577181205V29.39597315436242H302.7704697986577Q306.3140939597315 29.39597315436242 308.89127516778524 28.147651006711413Q311.4684563758389 26.899328859060404 312.87785234899326 24.604026845637584Q314.2872483221476 22.308724832214764 314.2872483221476 19.167785234899334Q314.2872483221476 16.026845637583897 312.87785234899326 13.771812080536915Q311.4684563758389 11.516778523489933 308.89127516778524 10.268456375838927Q306.3140939597315 9.02013422818792 302.68993288590605 9.02013422818792H290.5288590604027V60.0ZM314.1664429530201 60.0 300.193288590604 32.939597315436245H311.6295302013423L325.8845637583892 60.0Z M340.17020134228187 45.946308724832214V32.53691275167785Q342.2238926174497 30.08053691275168 344.29771812080537 27.684563758389267Q346.37154362416106 25.28859060402685 348.4655033557047 22.892617449664435Q350.55946308724833 20.49664429530202 352.6131543624161 18.080536912751683L368.55946308724833 7.105427357601002e-15H381.6869798657718L356.2373154362416 28.59060402684564H355.47221476510066ZM332.59973154362416 60.0V7.105427357601002e-15H343.23060402684564V18.0V32.375838926174495V37.48993288590604V60.0ZM369.6869798657718 60.0 350.39838926174497 31.61073825503356 356.8413422818792 23.436241610738257 382.08966442953016 60.0Z"/></symbol>
+  </svg>
+
+  <a class="skip-link" href="#main" data-section="main">Skip to main content</a>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <span class="lockup">
+        <span class="logo-tile"><svg viewBox="0 0 374 307" aria-hidden="true"><use href="#mk"/></svg></span>
+        <svg class="wordmark" viewBox="0 0 383 60" role="img" aria-label="TECHARK"><use href="#wm"/></svg>
+      </span>
+      <span class="product-name">Buybox Checker</span>
+    </div>
+  </header>
+
+  <main class="wrap" id="main" tabindex="-1">
+    <div class="intro">
+      <p class="label">Amazon.com · one zipcode per US state</p>
+      <h1>See who wins the buybox, <span class="blue">state by state.</span></h1>
+      <p class="lede">Paste your products, choose the states that matter to your sales, and watch the map fill in.</p>
+    </div>
+
+    <section class="card" id="form-card" aria-labelledby="new-check-title">
+      <h2 id="new-check-title" class="visually-hidden">New check</h2>
+      <form id="check-form" novalidate>
+        <div class="step" role="group" aria-labelledby="step-products">
+          <h3 class="step-title" id="step-products"><span class="step-num">1</span>Products</h3>
+          <p id="limit-hint" class="limit-hint">Up to <b id="limit-count">500 ASINs</b> per check.<span class="contact-only" hidden>
+            Need more? <a href="#contact" data-section="contact">Contact TECHARK</a></span></p>
+          <label class="field-label" for="asin-text">Amazon links or ASINs</label>
+          <textarea id="asin-text" rows="4" spellcheck="false" aria-describedby="limit-hint input-summary"
+            placeholder="One per line, or paste any text&#10;https://www.amazon.com/dp/B0BCMLGPYB&#10;B09B8V1LZ3"></textarea>
+          <div class="form-row">
+            <div class="upload">
+              <input type="file" id="asin-file" accept=".txt,.csv,text/plain,text/csv">
+              <label for="asin-file" class="button secondary">Upload .txt or .csv <span id="upload-limit" class="upload-limit"></span></label>
+              <span id="file-name" class="muted"></span>
+              <button id="file-clear" class="link-button" type="button" hidden>Remove file</button>
+            </div>
+            <p id="input-summary" class="input-summary" aria-live="polite">No ASINs yet</p>
+          </div>
+          <div id="input-details" class="input-details" hidden>
+            <details id="asin-list-details">
+              <summary id="asin-list-summary">Show the ASINs</summary>
+              <ol id="asin-list" class="code-list"></ol>
+            </details>
+            <details id="skipped-details" hidden>
+              <summary id="skipped-summary">Lines without an ASIN</summary>
+              <ol id="skipped-list" class="code-list"></ol>
+            </details>
+          </div>
+        </div>
+
+        <div class="step" role="group" aria-labelledby="step-states">
+          <h3 class="step-title" id="step-states"><span class="step-num">2</span>States</h3>
+          <div id="state-presets" class="presets" role="radiogroup" aria-label="Which states to check"></div>
+          <p id="large-list-note" class="note-line" hidden>Large list: Core + growth is picked for you to keep the check short.
+            <button id="use-all-states" class="link-button" type="button">Use all 50 states</button></p>
+          <details id="state-picker" class="picker">
+            <summary id="state-picker-summary">Show the states</summary>
+            <div class="picker-body">
+              <div class="picker-tools">
+                <button id="states-all" class="button secondary small" type="button">Select all 50</button>
+                <button id="states-none" class="button secondary small" type="button">Clear</button>
+                <span id="state-count" class="muted" aria-live="polite"></span>
+              </div>
+              <div id="state-groups"></div>
+            </div>
+          </details>
+        </div>
+
+        <div class="submit-row">
+          <div class="estimate-text">
+            <p id="check-estimate" class="estimate" aria-live="polite"></p>
+            <p id="check-estimate-more" class="muted"></p>
+          </div>
+          <button type="submit" id="start-button" class="button primary">Check buybox</button>
+          <button type="button" id="check-first" class="button primary" hidden></button>
+        </div>
+        <div id="form-message" class="message" role="alert" hidden><span id="form-message-text"></span></div>
+      </form>
+    </section>
+
+    <section id="job-section" class="job" hidden aria-labelledby="job-title">
+      <div class="checkbar">
+        <div class="checkbar-text">
+          <h2 id="job-title" class="checkbar-title"></h2>
+          <p id="job-meta" class="muted" aria-live="polite"></p>
+        </div>
+        <div class="job-actions">
+          <button id="cancel-button" class="button secondary" type="button" hidden>Stop check</button>
+          <button id="retry-button" class="button secondary" type="button" hidden></button>
+          <a id="csv-link" class="button secondary" href="#" download hidden>Download CSV</a>
+          <button id="new-check-button" class="button primary" type="button">New check</button>
+        </div>
+      </div>
+      <div id="job-error" class="message" role="alert" hidden></div>
+
+      <section id="progress-panel" class="card progress-panel" hidden aria-labelledby="progress-title">
+        <h2 id="progress-title" class="big-title"></h2>
+        <div class="progress" role="progressbar" aria-labelledby="progress-title" aria-valuemin="0" aria-valuemax="100" id="progress"><div id="progress-bar"></div></div>
+        <div class="tiles three">
+          <div class="tile"><span class="tile-label">Products finished</span><span id="tile-products" class="tile-value">–</span></div>
+          <div class="tile"><span class="tile-label">Checks done</span><span id="tile-checks" class="tile-value">–</span></div>
+          <div class="tile"><span class="tile-label">Time left</span><span id="tile-eta" class="tile-value">–</span></div>
+        </div>
+        <div class="safe-note">
+          <span class="ok-icon" aria-hidden="true">✓</span>
+          <p><b>Safe to close this page.</b> The check keeps running on the server. Come back with this page's link to see the results.</p>
+          <button class="button secondary small copy-link" type="button">Copy link</button>
+        </div>
+      </section>
+
+      <div id="store-prompt" class="store-prompt" hidden>
+        <p><b>Is <span id="store-name"></span> your store?</b> It holds the buybox most often in this check.
+          Say yes and the page talks about you, and points out products another seller holds everywhere.</p>
+        <div class="store-actions">
+          <button id="store-yes" class="button primary" type="button">Yes, it's mine</button>
+          <button id="store-no" class="button secondary" type="button">No</button>
+        </div>
+      </div>
+
+      <nav id="view-switch" class="view-switch" aria-label="Result views" hidden>
+        <a id="view-overview" href="#">Overview</a>
+        <a id="view-byproduct" href="#">By product</a>
+      </nav>
+
+      <div id="overview-view" class="view">
+        <section id="all-clear" class="card all-clear" hidden aria-labelledby="all-clear-title">
+          <div class="all-clear-head">
+            <span class="big-ok" aria-hidden="true">✓</span>
+            <div>
+              <p class="label">Nothing needs attention</p>
+              <h2 id="all-clear-title" class="big-title"></h2>
+            </div>
+          </div>
+          <h3 class="sub-title">What next</h3>
+          <div class="next-cards">
+            <article id="next-more-states" class="next-card">
+              <h4>Check all 50 states</h4>
+              <p id="next-more-text" class="muted"></p>
+              <button id="next-more-button" class="button primary" type="button"></button>
+            </article>
+            <article class="next-card">
+              <h4>Run this list again</h4>
+              <p class="muted">Same products and states, for next week's check.</p>
+              <button id="next-again-button" class="button secondary" type="button">Fill in the form</button>
+            </article>
+            <article class="next-card">
+              <h4>Share the result</h4>
+              <p class="muted">Send the team the CSV, or a link to this page.</p>
+              <div class="row-buttons">
+                <a id="next-csv" class="button secondary" href="#" download>Download CSV</a>
+                <button class="button secondary copy-link" type="button">Copy link</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="winner-section" class="hero-row" aria-label="Who wins the buybox">
+          <div class="card hero">
+            <p id="hero-label" class="label"></p>
+            <div class="winner-line">
+              <span class="trophy" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>
+              <div>
+                <h2 class="winner-name"><span id="hero-name"></span> <span id="hero-badge" class="badge-dark" hidden>Your store</span></h2>
+                <p id="hero-sentence" class="winner-sentence"></p>
+              </div>
+            </div>
+            <div id="share-bar" class="share-bar" role="img"></div>
+            <div id="share-legend" class="share-legend"></div>
+          </div>
+          <div class="attention">
+            <p class="attention-title">Products to look at</p>
+            <div id="attention-list" class="attention-list"></div>
+          </div>
+        </section>
+
+        <section id="loss-section" class="card map-row" aria-labelledby="loss-title">
+          <div class="map-main">
+            <h2 id="loss-title" class="card-title"></h2>
+            <p class="muted">Products where another seller, or nobody, holds the buybox, by state. States with no losses stay plain.</p>
+            <div id="loss-map" class="map-box"><p class="muted map-message">Loading map…</p></div>
+          </div>
+          <div class="map-side">
+            <p class="label">Products lost in the state</p>
+            <div id="loss-legend" class="ramp-legend"></div>
+            <p class="side-title">Most products lost</p>
+            <div id="loss-list" class="loss-list"></div>
+          </div>
+        </section>
+
+        <section id="recent-section" class="card" hidden aria-labelledby="recent-title">
+          <h2 id="recent-title" class="card-title">Just finished</h2>
+          <div id="recent-list" class="recent-list"></div>
+        </section>
+
+        <section id="list-section" class="card list-card" aria-labelledby="list-title">
+          <div class="list-head">
+            <div class="list-head-row">
+              <h2 id="list-title" class="card-title">Products</h2>
+              <div class="list-tools">
+                <label class="search"><span class="visually-hidden">Search products</span>
+                  <input id="list-search" type="search" placeholder="Search ASIN or title" autocomplete="off"></label>
+                <label class="sort">Sort
+                  <select id="list-sort">
+                    <option value="risk">Fewest states for the top winner</option>
+                    <option value="gap">Biggest price gap</option>
+                    <option value="title">Title</option>
+                  </select></label>
+              </div>
+            </div>
+            <div id="list-tabs" class="tabs" role="tablist" aria-label="Filter products"></div>
+          </div>
+          <div class="table-wrap flush">
+            <table id="product-table">
+              <caption class="visually-hidden">Products and who holds their buybox in each state</caption>
+              <thead><tr>
+                <th scope="col">Product</th><th scope="col">Top winner</th><th scope="col" id="strip-head">States</th>
+                <th scope="col">Everyone else</th><th scope="col" class="num">Buybox price</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="list-pager" class="pager"></div>
+        </section>
+      </div>
+
+      <div id="byproduct-view" class="view picker-layout" hidden>
+        <aside class="card pick-list" aria-label="Pick a product">
+          <div class="pick-tools">
+            <label class="search"><span class="visually-hidden">Search your products</span>
+              <input id="pick-search" type="search" placeholder="Search ASIN or title" autocomplete="off"></label>
+            <div id="pick-filters" class="pick-filters" role="group" aria-label="Show"></div>
+          </div>
+          <div id="pick-items" class="pick-items" role="listbox" aria-label="Products"></div>
+          <div id="pick-pager" class="pager small"></div>
+        </aside>
+        <section class="pick-detail" aria-labelledby="pick-title">
+          <div class="card">
+            <div class="pick-head">
+              <div>
+                <p id="pick-asin" class="muted"></p>
+                <h2 id="pick-title" class="pick-name"></h2>
+              </div>
+              <a id="pick-open" class="button secondary small" href="#">Full product view</a>
+            </div>
+            <p id="pick-headline" class="pick-headline"></p>
+            <div id="pick-legend" class="legend"></div>
+            <div id="pick-map" class="map-box"><p class="muted map-message">Loading map…</p></div>
+          </div>
+          <div class="pick-columns">
+            <div class="card small-card"><h3>You hold the buybox</h3><div id="pick-you"></div></div>
+            <div class="card small-card"><h3>Another seller holds it</h3><div id="pick-lost"></div></div>
+            <div class="card small-card"><h3>No buybox or not checked</h3><div id="pick-other"></div></div>
+          </div>
+        </section>
+      </div>
+
+      <div id="product-view" class="view" hidden>
+        <div class="crumbs-row">
+          <nav id="crumbs" class="crumbs" aria-label="Breadcrumb"></nav>
+          <div id="product-nav" class="product-nav">
+            <span id="product-position" class="muted"></span>
+            <a id="product-prev" class="round-button" href="#" aria-label="Previous product">‹</a>
+            <a id="product-next" class="round-button" href="#" aria-label="Next product">›</a>
+          </div>
+        </div>
+        <div class="checkbar">
+          <div class="checkbar-text">
+            <h2 id="product-title" class="checkbar-title"></h2>
+            <p id="product-meta" class="muted"></p>
+          </div>
+          <button class="button secondary copy-link" type="button">Copy link</button>
+        </div>
+        <section class="hero-row" aria-label="Who wins this product's buybox">
+          <div class="card hero">
+            <p class="label">Buybox winner</p>
+            <div class="winner-line">
+              <span id="p-trophy" class="trophy" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>
+              <div>
+                <h2 class="winner-name"><span id="p-name"></span> <span id="p-badge" class="badge-dark" hidden>Your store</span></h2>
+                <p id="p-sentence" class="winner-sentence"></p>
+              </div>
+            </div>
+            <div class="tiles three">
+              <div class="tile"><span class="tile-label">Buybox price</span><span id="p-price" class="tile-value">–</span></div>
+              <div class="tile"><span class="tile-label">Ships from</span><span id="p-ships" class="tile-value">–</span></div>
+              <div class="tile"><span class="tile-label">Seller ID</span><span id="p-seller-id" class="tile-value">–</span></div>
+            </div>
+            <div id="p-share-bar" class="share-bar" role="img"></div>
+            <div id="p-share-legend" class="share-legend"></div>
+          </div>
+          <div id="p-side" class="side-cards"></div>
+        </section>
+        <section class="card map-row" aria-labelledby="p-map-title">
+          <div class="map-main">
+            <h2 id="p-map-title" class="card-title">Winner by state</h2>
+            <div id="p-legend" class="legend" aria-label="Map legend"></div>
+            <div id="product-map" class="map-box"><p class="muted map-message">Loading map…</p></div>
+          </div>
+          <div class="map-side explainer">
+            <h3>How we know who wins</h3>
+            <ol>
+              <li>We open the product page as a shopper in each state, with one zipcode per state.</li>
+              <li>The buybox is the panel with the Add to Cart button. The seller under "Sold by" there is the winner, and its price is the buybox price.</li>
+              <li>No Add to Cart button means nobody holds the buybox in that state.</li>
+            </ol>
+          </div>
+        </section>
+        <section class="card list-card" aria-labelledby="p-table-title">
+          <h2 id="p-table-title" class="card-title padded">All states</h2>
+          <div class="table-wrap flush">
+            <table id="results-table">
+              <caption class="visually-hidden">Buybox result per state</caption>
+              <thead><tr>
+                <th scope="col">State</th><th scope="col">Zipcode</th><th scope="col">Status</th>
+                <th scope="col">Sold by</th><th scope="col">Ships from</th><th scope="col" class="num">Price</th>
+                <th scope="col">Delivery</th><th scope="col">Availability</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+      <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+    </section>
+
+    <section id="contact" class="card contact-card contact-only" tabindex="-1" aria-labelledby="contact-title" hidden>
+      <div class="contact-text">
+        <h2 id="contact-title">Want to check more?</h2>
+        <p class="muted">This checker runs up to <span id="contact-limit">5</span> products per check, from one IP address. To check more products, more
+          often or in more places, contact TECHARK.</p>
+      </div>
+      <div class="contact-actions">
+        <a class="button primary" href="https://www.techark.io/#contact" target="_blank" rel="noopener">Contact TECHARK</a>
+        <span class="muted">or email <a href="mailto:hello@techark.io">hello@techark.io</a></span>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-row">
+        <span class="lockup small">
+          <span class="logo-tile"><svg viewBox="0 0 374 307" aria-hidden="true"><use href="#mk"/></svg></span>
+          <svg class="wordmark" viewBox="0 0 383 60" role="img" aria-label="TECHARK"><use href="#wm"/></svg>
+        </span>
+        <p>Buybox Checker is a TECHARK product · © 2026 TECHARK</p>
+        <p class="footer-links"><a href="mailto:hello@techark.io">hello@techark.io</a> · <a href="https://www.techark.io" target="_blank" rel="noopener">www.techark.io</a></p>
+      </div>
+      <p class="muted">Not affiliated with Amazon. Checks use this server's IP address; keep volumes low and respect
+        Amazon's Conditions of Use.</p>
+    </footer>
+  </main>
+</body>
+</html>

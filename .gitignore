@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Amazon session cookies and run output: never commit these
+amazon_zip_states/
+results/
+debug_pages/
+*.csv
+!tests/**/*.csv
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Deployment: generated or secret on the VM, never committed
+.env
+.env.local
+nginx/ssl/
+nginx/.template.sha256
+ssl-deploy-hook.sh
