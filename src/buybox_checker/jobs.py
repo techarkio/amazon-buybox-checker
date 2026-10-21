@@ -169,6 +169,11 @@ class JobManager:
         jobs = list(self._jobs.values())  # on equal start times, the one added last is the latest
         return max(reversed(jobs), key=lambda job: job.started_at, default=None)
 
+    def recent(self, limit: int = MAX_LOADED_JOBS) -> list[Job]:
+        """Return the most recently started jobs, newest first."""
+        jobs = list(reversed(self._jobs.values()))  # on equal start times, the one added last comes first
+        return sorted(jobs, key=lambda job: job.started_at, reverse=True)[:limit]
+
     def running(self) -> Job | None:
         """Return the job that is running now, or None."""
         return next((job for job in self._jobs.values() if job.status == STATUS_RUNNING), None)

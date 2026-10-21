@@ -6,10 +6,17 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:  # Windows and macOS on the oldest and newest supported Python
+          - { os: windows-latest, python-version: "3.10" }
+          - { os: windows-latest, python-version: "3.14" }
+          - { os: macos-latest, python-version: "3.10" }
+          - { os: macos-latest, python-version: "3.14" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,3 +28,8 @@ jobs:
         run: ruff check .
       - name: Test (offline, no browser or Amazon needed)
         run: pytest -q
+      - name: Chromium installs and starts, as in the README
+        if: matrix.python-version == '3.14'
+        run: |
+          python -m playwright install --with-deps chromium
+          python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); b = p.chromium.launch(); print('Chromium', b.version); b.close(); p.stop()"

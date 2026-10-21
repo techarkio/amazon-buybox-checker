@@ -59,6 +59,7 @@ DEFAULT_PORT = 8765
 MAX_UPLOAD_BYTES = 2_000_000
 PRODUCTS_PER_PAGE = 25
 MAX_PRODUCTS_PER_PAGE = 100
+HISTORY_ASINS = 3  # ASINs named in a "Past checks" line; the rest are counted
 MAX_LOCAL_SESSIONS = 6
 APP_HEADER = "X-Buybox-Checker"
 HEALTH_PATH = "/api/health"
@@ -154,6 +155,13 @@ def create_app(manager: JobManager | None = None, default_sessions: int | None =
             raise HTTPException(409, busy_message(error, public)) from error
         return {"job": job_view(job), "skipped_short_links": find_short_links(text)}
 
+    @app.get("/api/jobs")
+    def list_jobs() -> dict:
+        """List the recent checks, newest first, for the page's "Past checks" (never on a public site)."""
+        if public:
+            raise HTTPException(404, "Past checks are not listed on a public site")
+        return {"jobs": [history_item(job) for job in manager.recent()]}
+
     @app.get("/api/jobs/latest")
     def get_latest_job(store: str = "") -> dict:
         """Return the most recent job, so a reloaded page can pick it up again (never on a public site)."""
@@ -240,6 +248,15 @@ def job_view(job: Job, store: str = "") -> dict:
         "retryable": 0 if job.status == STATUS_RUNNING else len(job.retry_pairs()),
         "overview": overview(catalog, states),
         "recent": recent_products(catalog),
+    }
+
+
+def history_item(job: Job) -> dict:
+    """Describe a job in one line of "Past checks": when, what, and how many of its checks worked."""
+    return {
+        "id": job.id, "status": job.status, "started_at": job.started_at, "finished_at": job.finished_at,
+        "products": len(job.asins), "asins": job.asins[:HISTORY_ASINS], "states": list(job.states),
+        "total": job.total, "checked": job.total - len(job.retry_pairs()),
     }
 
 

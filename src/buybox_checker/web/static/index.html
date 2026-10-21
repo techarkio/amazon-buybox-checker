@@ -28,6 +28,7 @@
         <svg class="wordmark" viewBox="0 0 383 60" role="img" aria-label="TECHARK"><use href="#wm"/></svg>
       </span>
       <span class="product-name">Buybox Checker</span>
+      <a id="past-checks-link" class="topnav" href="#past-checks" data-section="past-checks" hidden>Past checks</a>
     </div>
   </header>
 
@@ -342,6 +343,20 @@
         </section>
       </div>
       <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+    </section>
+
+    <section id="past-checks" class="card list-card" tabindex="-1" aria-labelledby="past-checks-title" hidden>
+      <h2 id="past-checks-title" class="card-title padded">Past checks</h2>
+      <div class="table-wrap flush">
+        <table id="past-checks-table">
+          <caption class="visually-hidden">Checks run with this server, newest first</caption>
+          <thead><tr>
+            <th scope="col">Started</th><th scope="col">Products</th><th scope="col">States</th>
+            <th scope="col">Result</th><th scope="col" class="num">Results file</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
 
     <section id="contact" class="card contact-card contact-only" tabindex="-1" aria-labelledby="contact-title" hidden>

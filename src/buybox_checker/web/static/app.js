@@ -33,7 +33,8 @@ const CALLOUTS = {
   CT: [942, 221, 938, 221], NJ: [942, 244, 938, 244], DE: [942, 267, 938, 267], MD: [942, 290, 938, 290],
   HI: [345, 568, 342, 572],
 };
-const PAGE_SECTIONS = new Set(["main", "contact"]); // in-page anchors: never a check id in the hash
+const PAGE_SECTIONS = new Set(["main", "contact", "past-checks"]); // in-page anchors: never a check id in the hash
+const JOB_STATUS_LABELS = { running: "Running", done: "Done", cancelled: "Stopped", failed: "Error", interrupted: "Interrupted" };
 const LABEL_AT = { FL: [798, 546], LA: [566, 478], MI: [688, 188], CA: [80, 292], KY: [692, 322], VA: [798, 306], ID: [200, 160] };
 
 const app = {
@@ -64,6 +65,7 @@ async function init() {
   // The hash names the check and view, so section links scroll instead of changing it.
   document.querySelectorAll("[data-section]").forEach((link) => link.addEventListener("click", scrollToSection));
   resumeJob();
+  loadPastChecks();
 }
 
 function scrollToSection(event) {
@@ -356,6 +358,7 @@ async function startJob(event, firstAsins = null) {
     resetViews();
     app.job = data.job;
     rememberLastJob(data.job.id);
+    loadPastChecks();
     location.hash = defaultHash(data.job);
     $("job-section").hidden = false;
     $("job-section").scrollIntoView({ behavior: prefersMotion() ? "smooth" : "auto", block: "start" });
@@ -436,10 +439,13 @@ async function resumeJob() {
     if (route.id) {
       app.job = await fetchJson(api(`/api/jobs/${encodeURIComponent(route.id)}`));
     } else {
-      // A public site never shows someone else's latest check: reopen only the one this browser started.
+      // The page starts on a fresh form: only a check that is still running opens by itself (finished ones
+      // are in "Past checks"). A public site never shows someone else's check: it looks only at this browser's.
       const mine = app.config.public ? lastJob() : null;
       if (app.config.public && !mine) return;
-      app.job = await fetchJson(api(mine ? `/api/jobs/${encodeURIComponent(mine)}` : "/api/jobs/latest"));
+      const job = await fetchJson(api(mine ? `/api/jobs/${encodeURIComponent(mine)}` : "/api/jobs/latest"));
+      if (job.status !== "running") return;
+      app.job = job;
       history.replaceState(null, "", defaultHash(app.job));
     }
   } catch {
@@ -471,6 +477,9 @@ async function onHashChange() {
       showMessage("No check with this link (checks are kept for a while, then removed).");
       return;
     }
+    applyRoute();
+    $("job-section").scrollIntoView({ behavior: prefersMotion() ? "smooth" : "auto", block: "start" });
+    return;
   }
   applyRoute();
 }
@@ -497,6 +506,7 @@ async function refreshJob() {
   try {
     const job = await fetchJson(api(`/api/jobs/${id}`));
     if (!app.job || app.job.id !== id) return;
+    if (job.status !== "running") loadPastChecks(); // it just finished: update its result in the list
     app.job = job;
     renderJob();
     refreshViewData();
@@ -549,6 +559,39 @@ function lastJob() {
   } catch {
     return null;
   }
+}
+
+// ---------- Past checks ----------
+
+async function loadPastChecks() {
+  if (app.config.public) return; // a public site never lists checks: each one opens only from its own link
+  let jobs;
+  try {
+    ({ jobs } = await fetchJson("/api/jobs"));
+  } catch {
+    return; // the list is a shortcut: every check still opens from its link
+  }
+  $("past-checks").hidden = $("past-checks-link").hidden = jobs.length === 0;
+  $("past-checks-table").tBodies[0].replaceChildren(...jobs.map(pastCheckRow));
+}
+
+function pastCheckRow(job) {
+  const more = job.products - job.asins.length;
+  const preview = job.asins.join(", ") + (more > 0 ? ` and ${fmt(more)} more` : "");
+  const csv = job.checked ? el("a", { href: `/api/jobs/${job.id}/csv`, download: "" }, "Download CSV") : "";
+  return el("tr", {},
+    el("td", {}, el("time", { dateTime: job.started_at }, dateTimeOf(job.started_at))),
+    el("th", { scope: "row" },
+      el("a", { href: `#${job.id}` }, `${fmt(job.products)} ${plural(job.products, "product")}`),
+      el("span", { className: "asin-preview muted" }, preview)),
+    el("td", {}, statesLabel(job.states)),
+    el("td", {}, `${JOB_STATUS_LABELS[job.status] || job.status} · ${fmt(job.checked)} of ${fmt(job.total)} checked`),
+    el("td", { className: "num" }, csv));
+}
+
+function dateTimeOf(iso) {
+  const day = new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${day}, ${timeOf(iso)}`;
 }
 
 // ---------- Your store ----------

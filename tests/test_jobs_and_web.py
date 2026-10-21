@@ -56,6 +56,19 @@ def test_web_api_runs_a_job_from_text_and_csv_upload():
     assert csv_response.status_code == 200 and "B09B8V1LZ3" in csv_response.text
 
 
+def test_web_api_lists_past_checks_newest_first():
+    manager = JobManager(run_checks=fake_run_checks)
+    client = TestClient(create_app(manager=manager))
+    assert client.get("/api/jobs").json() == {"jobs": []}
+    first = manager.start(["B0BCMLGPYB"], {"NY": "10001"})
+    wait_until_finished(first)
+    second = manager.start(["B0BCMLGPYB", "B09B8V1LZ3", "B000000001", "B000000002"], {"NY": "10001", "CA": "90012"})
+    wait_until_finished(second)
+    jobs = client.get("/api/jobs").json()["jobs"]
+    assert [job["id"] for job in jobs] == [second.id, first.id]
+    assert jobs[0]["products"] == 4 and jobs[0]["asins"] == ["B0BCMLGPYB", "B09B8V1LZ3", "B000000001"]
+    assert (jobs[0]["checked"], jobs[0]["total"], jobs[0]["states"]) == (8, 8, ["NY", "CA"])
+
 def test_web_api_rejects_bad_requests():
     client = TestClient(create_app(manager=JobManager(run_checks=BlockingRun())))
     assert client.post("/api/jobs", data={"text": "B0BCMLGPYB"}).status_code == 403  # no app header
@@ -75,6 +88,7 @@ def test_public_site_never_hands_out_someone_elses_check():
     assert client.get("/api/config").json()["public"] is True
     started = client.post("/api/jobs", headers=HEADER, data={"text": "B0BCMLGPYB"}).json()["job"]
     assert client.get("/api/jobs/latest").status_code == 404  # no browsing the latest check
+    assert client.get("/api/jobs").status_code == 404  # nor the past checks
     assert client.get(f"/api/jobs/{started['id']}").status_code == 200  # its own link still works
     busy = client.post("/api/jobs", headers=HEADER, data={"text": "B09B8V1LZ3"})
     assert busy.status_code == 409 and busy.json()["detail"].endswith("Please try again in a few minutes.")
