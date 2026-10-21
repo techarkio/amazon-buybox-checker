@@ -13,6 +13,7 @@ Constraints: Amazon blocks heavy traffic. When it pushes back (block page, timeo
 import logging
 import queue
 import random
+import sys
 import threading
 import time
 from collections.abc import Callable
@@ -160,7 +161,8 @@ def run_session(remote_url: str | None, checks: queue.Queue, on_result: ResultCa
             browser = open_browser(playwright, remote_url, is_headed)
             user_agent = real_user_agent(browser)
         except Exception as error:
-            logger.error("Could not start a session on %s: %s", where, short_error(error))
+            logger.error("Could not start a session on %s: %s%s", where, short_error(error),
+                         "" if remote_url else missing_browser_hint(error))
             return
         logger.info("Session started on %s", where)
         process_checks(Session(browser, user_agent, throttle), checks, on_result, stop_event)
@@ -172,6 +174,17 @@ def open_browser(playwright: Playwright, remote_url: str | None, is_headed: bool
     if remote_url:
         return playwright.chromium.connect(remote_url, timeout=REMOTE_CONNECT_TIMEOUT_MS)
     return playwright.chromium.launch(headless=not is_headed)
+
+
+def missing_browser_hint(error: Exception) -> str:
+    """Say how to install Chromium when this Playwright's build is missing.
+
+    Each Playwright version needs its own Chromium build, so the command names this exact Python: a bare
+    `playwright install` can run another environment's Playwright and install the wrong build.
+    """
+    if "Executable doesn't exist" not in str(error):
+        return ""
+    return f". Chromium is not installed for this Playwright. Run: {sys.executable} -m playwright install chromium"
 
 
 def real_user_agent(browser: Browser) -> str:

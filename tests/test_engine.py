@@ -85,3 +85,9 @@ def test_a_zipcode_still_blocked_after_every_round_gets_a_fresh_session_next_run
                           threading.Event())
     assert [(row["status"], row["attempts"]) for row in rows] == [("blocked", 4)]
     assert cleared == ["35203"]
+
+
+def test_a_missing_chromium_says_how_to_install_it_with_this_python():
+    error = Exception("BrowserType.launch: Executable doesn't exist at /ms-playwright/chromium-1248")
+    assert engine.missing_browser_hint(error).endswith(f"Run: {engine.sys.executable} -m playwright install chromium")
+    assert engine.missing_browser_hint(Exception("net::ERR_CONNECTION_REFUSED")) == ""

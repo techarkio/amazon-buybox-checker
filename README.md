@@ -31,7 +31,7 @@ cd amazon-buybox-checker
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 python -m pip install .
-playwright install chromium
+python -m playwright install chromium
 ```
 
 In a new terminal, run `source .venv/bin/activate` from the project folder again before using the commands below.
@@ -71,7 +71,9 @@ Check all 50 states, a list of state codes, or a preset:
   or the virtual environment isn't active. Run `source .venv/bin/activate`, then `python --version`.
 - **`address already in use`**: another program uses port 8765. Run `buybox-checker-web --port 8800`.
 - **The browser doesn't open**: open <http://localhost:8765> yourself while `buybox-checker-web` is running.
-- **`Executable doesn't exist`** when a check starts: run `playwright install chromium`.
+- **`Executable doesn't exist`** when a check starts: the browser for this Playwright version isn't installed.
+  With the virtual environment active, run `python -m playwright install chromium`. A bare `playwright install`
+  can run another environment's Playwright (conda, for example) and download a browser this one can't use.
 
 ## Contact
 
